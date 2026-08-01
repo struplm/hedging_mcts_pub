@@ -1,0 +1,28 @@
+---
+learningCycles: 30
+episodes: 5000
+temp: 100
+nnUpdateThreshold: 1.0
+exmpThreshold: 100000
+numMCTSSims: 35
+validationCycles: 1_000
+nnWeight: 1.0
+shortenHistoryAfterIter: 4
+numberWorkers: 4
+permanentNoise: 0
+firstLeafNoise: 0.0
+measureSampleEfficiency: 0 #binary flag. if true model is trained on pre-defined paths to measure number of needed samples
+reservoir: 5000
+saveCheckpointsFolder: './runs/gbm_'
+loadModelFile: null
+loadCheckpointFile: null
+nnArgs:
+  lr: 0.001
+  dropout: 0.0
+  epochs: 20
+  batch_size: 64
+  num_channels: 256
+  optimizer: "adam"
+  weight_decay: 0.0
+  num_layers: 3
+  use_batchnorm: True

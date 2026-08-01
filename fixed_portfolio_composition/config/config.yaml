@@ -1,0 +1,23 @@
+---
+learningCycles: 30
+episodes: 5000
+temp: 100
+nnUpdateThreshold: 1.0
+exmpThreshold: 100000
+numMCTSSims: 25
+validationCycles: 10000
+nnWeight: 1.0
+shortenHistoryAfterIter: 4
+numberWorkers: 4
+permanentNoise: 0
+measureSampleEfficiency: 0
+reservoir: 50000
+saveCheckpointsFolder: './runs/fixed_portfolio_composition_'
+loadModelFile: null
+loadCheckpointFile: null
+nnArgs:
+  lr: 0.001
+  dropout: 0.0
+  epochs: 10
+  batch_size: 64
+  num_channels: 512

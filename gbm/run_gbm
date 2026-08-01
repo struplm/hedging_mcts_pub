@@ -1,0 +1,4 @@
+#!/bin/bash
+python gbm_launcher_deep_hedging.py
+python gbm_launcher_alphazero.py
+python gbm_charting.py

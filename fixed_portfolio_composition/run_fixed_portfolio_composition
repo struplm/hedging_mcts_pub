@@ -1,0 +1,4 @@
+#!/bin/bash
+python fixed_portfolio_composition_launcher_deep_hedging.py
+python fixed_portfolio_composition_launcher_alphazero.py
+python fixed_portfolio_composition_charting.py

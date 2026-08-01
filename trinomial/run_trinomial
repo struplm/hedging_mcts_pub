@@ -1,0 +1,4 @@
+#!/bin/bash
+python trinomial_launcher_deep_hedging.py
+python trinomial_launcher_alphazero.py
+python trinomial_charting.py

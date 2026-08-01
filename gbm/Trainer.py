@@ -1,0 +1,215 @@
+import logging
+import os
+import sys
+import time
+from collections import deque
+from pickle import Pickler, Unpickler
+from random import randrange, shuffle
+
+import numpy as np
+from tqdm import tqdm
+
+from MCTS import MCTS
+
+log = logging.getLogger(__name__)
+
+
+class Trainer:
+    def __init__(self, game, nnet, config):
+        self.game = game
+        self.nnet = nnet
+        self.pnet = self.nnet.__class__(self.game, config["nnArgs"])
+        self.config = config
+        self.mcts = MCTS(self.game, self.nnet, self.config)
+        self.permanentNoise = config["permanentNoise"]
+        self.firstLeafNoise = config["firstLeafNoise"]
+        self.trainExamplesHistory = []
+        self.skipFirstSelfPlay = False
+        self.nnFailedLastTime = False
+        print("Constructed Trainer for Hedger")
+
+    def executeEpisode(self):
+        trainExamples = []
+        state = self.game.getInitState()
+
+        self.curPlayer = 1
+        episodeStep = 0
+
+        while True:
+            episodeStep += 1
+            temp = 1  # int(episodeStep < self.config['temp'])
+            pi = self.mcts.getActionProb(state, temp=temp)
+            action = np.random.choice(len(pi), p=pi)
+            trainExamples.append((state, self.curPlayer, pi, action))
+            state, self.curPlayer = self.game.getNextState(
+                state, self.curPlayer, action
+            )
+            r = self.game.getGameEnded(state, self.curPlayer)
+
+            if r != 0:
+                return {
+                    self.game.stringRepresentation(x[0]): (x[0], x[2], r, x[3])
+                    for x in trainExamples
+                }
+
+    def learn(self):
+        start_time = time.time()
+        for i in range(1, self.config["learningCycles"] + 1):
+            log.info(f"Starting Iter #{i} at time " + str(time.time() - start_time))
+            if not self.skipFirstSelfPlay or i > 1:
+                iterationTrainExamples = {}
+                if not self.nnFailedLastTime:
+                    self.mcts = MCTS(
+                        self.game,
+                        self.nnet,
+                        self.config,
+                        self.permanentNoise,
+                        self.firstLeafNoise,
+                    )
+                before = time.time()
+                for _ in tqdm(range(self.config["episodes"]), desc="Self Play"):
+                    iterationTrainExamples = {
+                        **iterationTrainExamples,
+                        **self.executeEpisode(),
+                    }
+                after = time.time()
+                log.info(
+                    "samplesEpisodes_" + str(i) + " ran for " + str(after - before)
+                )
+                self.trainExamplesHistory.append(iterationTrainExamples)
+            if len(self.trainExamplesHistory) > self.config["shortenHistoryAfterIter"]:
+                log.warning(
+                    f"Removing the oldest entry in trainExamples. len(trainExamplesHistory) = {len(self.trainExamplesHistory)}"
+                )
+                self.trainExamplesHistory.pop(0)
+            # self.saveTrainExamples(i - 1)
+
+            trainingData = []
+            for e in self.trainExamplesHistory:
+                trainingData.extend(list(e.values()))
+
+            print(len(trainingData))
+            shuffle(trainingData)
+
+            self.nnet.save_checkpoint(
+                folder=self.config["saveCheckpointsFolder"], filename="temp.pth.tar"
+            )  # new
+            self.pnet.load_checkpoint(
+                folder=self.config["saveCheckpointsFolder"], filename="temp.pth.tar"
+            )  # past
+            self.nnet.train(trainingData)
+
+            log.info("COMPARE AGAINST PAST MODEL")
+
+            h_rewards = {"past": [], "new": [], "whoWon": [], "distances": []}
+
+            distances_old = []
+            distances_new = []
+            actions_old = []
+            actions_new = []
+            for _ in tqdm(
+                range(self.config["validationCycles"]), desc="Validation...."
+            ):
+                curPlayer = 1
+                state = self.game.getInitState()
+
+                newPlayer = lambda x: np.argmax(self.nnet.predict(x)[0])
+                pastPlayer = lambda x: np.argmax(self.pnet.predict(x)[0])
+                actions = []
+                while self.game.getGameEnded(state, curPlayer) == 0:
+                    action = pastPlayer(state)
+                    actions.append(action)
+                    state, curPlayer = self.game.getNextState(state, curPlayer, action)
+                # h_l2_distance_oldModel+= (self.game.stateValue(state)-self.game.)**2
+                actions_old.append(actions)
+                result1 = self.game.getGameEnded(state, curPlayer)
+                # print('\n Past result ' +str(result1))
+                h_rewards["past"].append(result1)
+                distances_old.append(
+                    (
+                        (self.game.stateValue(state))
+                        - (max(0.0, state[0, :][3] - self.game.strike))
+                    )
+                    ** 2
+                )
+
+                state = self.game.getInitState()
+                actions = []
+                while self.game.getGameEnded(state, curPlayer) == 0:
+                    action = newPlayer(state)
+                    actions.append(action)
+                    state, curPlayer = self.game.getNextState(state, curPlayer, action)
+                actions_new.append(actions)
+
+                result2 = self.game.getGameEnded(state, curPlayer)
+                distances_new.append(
+                    (
+                        (self.game.stateValue(state))
+                        - (max(0.0, state[0, :][3] - self.game.strike))
+                    )
+                    ** 2
+                )
+                # print('\n New result ' +str(result2))
+                h_rewards["new"].append(result2)
+
+            log.info(
+                "NEW/PREV Average "
+                + str(sum(h_rewards["new"]) / self.config["validationCycles"])
+                + "/"
+                + str(sum(h_rewards["past"]) / self.config["validationCycles"])
+            )
+            if sum(h_rewards["new"]) < self.config["nnUpdateThreshold"] * sum(
+                h_rewards["past"]
+            ):
+                log.info("REJECTING NEW MODEL")
+                self.nnet.load_checkpoint(
+                    folder=self.config["saveCheckpointsFolder"], filename="temp.pth.tar"
+                )
+                self.nnFailedLastTime = True
+                h_rewards["distance"] = distances_old
+                h_rewards["whoWon"].append(0)
+                h_rewards["actions"] = actions_old
+
+            else:
+                log.info("ACCEPTING NEW MODEL")
+
+                self.nnet.save_checkpoint(
+                    folder=self.config["saveCheckpointsFolder"], filename="best.pth.tar"
+                )
+                self.nnFailedLastTime = False
+                h_rewards["distance"] = distances_new
+                h_rewards["whoWon"].append(1)
+                h_rewards["actions"] = actions_new
+
+            with open(
+                self.config["saveCheckpointsFolder"] + "/h_rewards_" + str(i), "wb+"
+            ) as fff:
+                Pickler(fff).dump(h_rewards)
+            fff.closed
+
+    def getCheckpointFile(self, iteration):
+        return "checkpoint_" + str(iteration) + ".pth.tar"
+
+    def saveTrainExamples(self, iteration):
+        folder = self.config["saveCheckpointsFolder"]
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        filename = os.path.join(folder, self.getCheckpointFile(iteration) + ".examples")
+        with open(filename, "wb+") as f:
+            Pickler(f).dump(self.trainExamplesHistory)
+        f.closed
+
+    def loadTrainExamples(self):
+        examplesFile = self.config["loadCheckpointFile"]
+        if not os.path.isfile(examplesFile):
+            log.warning(f'File "{examplesFile}" with trainExamples not found!')
+            r = input("Continue? [y|n]")
+            if r != "y":
+                sys.exit()
+        else:
+            log.info("File with trainExamples found. Loading it...")
+            with open(examplesFile, "rb") as f:
+                self.trainExamplesHistory = Unpickler(f).load()
+            log.info("Loading done!")
+
+            self.skipFirstSelfPlay = True

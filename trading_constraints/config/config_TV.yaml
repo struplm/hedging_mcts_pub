@@ -1,0 +1,23 @@
+---
+learningCycles: 60
+episodes: 500
+temp: 100
+nnUpdateThreshold: 1.0
+exmpThreshold: 100000
+numMCTSSims: 35
+validationCycles: 500
+nnWeight: 1.0
+shortenHistoryAfterIter: 4
+numberWorkers: 4
+permanentNoise: 1.0
+measureSampleEfficiency: 0 #binary flag. if true model is trained on pre-defined paths to measure number of needed samples
+reservoir: 50000
+saveCheckpointsFolder: './runs/trading_constraints/00'
+loadModelFile: null
+loadCheckpointFile: null
+nnArgs:
+  lr: 0.001
+  dropout: 0.0
+  epochs: 10
+  batch_size: 64
+  num_channels: 512
