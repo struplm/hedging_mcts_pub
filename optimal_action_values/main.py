@@ -235,15 +235,25 @@ if plot_type == "constraint" :
   inches_per_pt = 1.0/72.27
   linewidth = inches_per_pt*433.62
   two_figs_in_row = 0.48*linewidth # originaly setting: 8,8
+
+  two_figs_in_row_y = 3.5/5*two_figs_in_row
+
   two_figs_in_row_axis = (0.190,0.130,0.95-0.190,0.95-0.130)
   two_figs_in_row_axis_spec = (0.190+0.040,0.130,0.95-0.190-0.040,0.95-0.130)
   two_figs_in_row_axis_spec2 = (0.150,0.130,0.95-0.150-0.010,0.95-0.130)
 
+  alittle = 0.075
+  two_figs_in_row_axis_spec_ =  (0.190+0.040,0.130+alittle    ,0.95-0.190-0.040,0.95-0.130-alittle)
+  two_figs_in_row_axis_spec_2 = (0.150      ,0.130+alittle    ,0.95-0.150-0.010,0.95-0.130-alittle)
+
 
 
   fig = plt.figure()
-  fig.set_size_inches(two_figs_in_row, two_figs_in_row)
-  plt.axes(two_figs_in_row_axis_spec2)
+  # fig.set_size_inches(two_figs_in_row, two_figs_in_row)
+  # plt.axes(two_figs_in_row_axis_spec2)
+  fig.set_size_inches(two_figs_in_row, two_figs_in_row_y)
+  plt.axes(two_figs_in_row_axis_spec_2)
+
   ax = fig.get_axes()[0]
 
 
@@ -263,8 +273,11 @@ if plot_type == "constraint" :
     plt.savefig(f"fig/constrheatbottom.pdf")
 
   # Q plots
-  plt.figure().set_size_inches(two_figs_in_row, two_figs_in_row)
-  plt.axes(two_figs_in_row_axis_spec)
+  # plt.figure().set_size_inches(two_figs_in_row, two_figs_in_row)
+  # plt.axes(two_figs_in_row_axis_spec)
+  plt.figure().set_size_inches(two_figs_in_row, two_figs_in_row_y)
+  plt.axes(two_figs_in_row_axis_spec_)
+
   plt.plot(env.aR, Q[env.T-1,si,ai,bi,:])
   plt.xlim(env.aR[0],2)
   # plt.xlabel(r'$a_{n-1}\;(=d_n^1)$')
@@ -319,12 +332,23 @@ if plot_type == "non_inc_util_non_convex_cost" :
   inches_per_pt = 1.0/72.27
   linewidth = inches_per_pt*433.62
   two_figs_in_row = 0.48*linewidth 
+
+  two_figs_in_row_y = 3.5/5*two_figs_in_row
+
   two_figs_in_row_axis = (0.190,0.130,0.95-0.190,0.95-0.130)
   two_figs_in_row_axis_spec = (0.190+0.040,0.130,0.95-0.190-0.040,0.95-0.130)
 
+  two_figs_in_row_axis_spec2 =  (0.150,0.130    ,0.95-0.150-0.010,0.95-0.130)
+  alittle = 0.075
+  two_figs_in_row_axis_spec_ =  (0.190+0.040,0.130+alittle    ,0.95-0.190-0.040,0.95-0.130-alittle)
+  two_figs_in_row_axis_spec_2 = (0.150      ,0.130+alittle    ,0.95-0.150-0.010,0.95-0.130-alittle)
 
-  plt.figure().set_size_inches(two_figs_in_row, two_figs_in_row)
-  plt.axes(two_figs_in_row_axis_spec)
+
+  # plt.figure().set_size_inches(two_figs_in_row, two_figs_in_row)
+  # plt.axes(two_figs_in_row_axis_spec)
+  plt.figure().set_size_inches(two_figs_in_row, two_figs_in_row_y)
+  plt.axes(two_figs_in_row_axis_spec_)
+
   plt.plot(env.aR,Q[t0,si0,ai0,bi0].T)
   # plt.xlabel(r'$a_{n-1}\;(=d_{n}^1)$') 
   # plt.ylabel(r'$Q^{*}_{n-1}(s_{n-1},a_{n-1})$')

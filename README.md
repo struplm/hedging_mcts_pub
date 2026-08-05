@@ -18,7 +18,7 @@ conda create -n <name of your environment> python=3.11.9 pip && conda activate <
 To produce the plots shown in the paper execute the following in a bash shell:
 ```bash
 cd optimal_action_values
-bash run
+bash run.sh
 ```
 After execution has completed, a `fig` folder with .pdf files should have been generated.
 
