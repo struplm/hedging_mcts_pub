@@ -1,6 +1,5 @@
 # hedging_mcts
-Repository for: Deep Hedging Under Non-Convexity: Geometry and Search-Based Diagnostics
-
+This repository contains the source code for the experiments presented in *Deep Hedging Under Non-Convexity: Geometry and Search-Based Diagnostics* by Matteo Magiolo, Giuseppe Nuti, Miroslav Štrupl, and Oleg Szehr.
 
 # Reproducing Experiments:
 
